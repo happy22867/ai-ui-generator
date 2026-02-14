@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import PreviewRenderer from "./preview/PreviewRenderer";
 
+
+const API = "https://ai-ui-generator-backend-gga6.onrender.com";
+
 export default function App() {
   const [tree, setTree] = useState([]);
   const [input, setInput] = useState("");
@@ -8,16 +11,28 @@ export default function App() {
   const [versions, setVersions] = useState([]);
   const [currentVersion, setCurrentVersion] = useState(0);
   const [toast, setToast] = useState(null);
+  
+
 
   // Fetch all saved versions
-  async function fetchVersions() {
-    const res = await fetch("http://localhost:4000/versions");
+async function fetchVersions() {
+  try {
+    const res = await fetch(`${API}/versions`);
+    if (!res.ok) throw new Error("Failed to fetch versions");
     const data = await res.json();
-    setVersions(data);
+    setVersions(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error(err);
+    setVersions([]);
   }
+}
+
 
   async function deleteVersion(index) {
-  await fetch(`http://localhost:4000/versions/${index}`, { method: "DELETE" });
+  await fetch(`${API}/versions/${index}`, {
+  method: "DELETE",
+});
+
   fetchVersions(); // refresh versions list
   if (currentVersion === index) {
     setTree([]);
@@ -28,11 +43,12 @@ export default function App() {
   // Rollback to a version
  async function rollback(index) {
   try {
-    const res = await fetch("http://localhost:4000/rollback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ versionIndex: index }),
-    });
+    const res = await fetch(`${API}/rollback`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ versionIndex: index }),
+});
+
 
     if (!res.ok) throw new Error("Invalid version index");
 
@@ -67,15 +83,16 @@ export default function App() {
 
     const isFresh = /create|generate|build|new ui/i.test(input);
 
-    const res = await fetch("http://localhost:4000/generate-ui", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: input,
-        previousTree: isFresh ? [] : tree,
-        mode: isFresh ? "fresh" : "modify"
-      }),
-    });
+    const res = await fetch(`${API}/generate-ui`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    message: input,
+    previousTree: isFresh ? [] : tree,
+    mode: isFresh ? "fresh" : "modify",
+  }),
+});
+
 
     const data = await res.json();
     console.log("Response from server:", data);
